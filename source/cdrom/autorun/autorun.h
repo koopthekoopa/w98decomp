@@ -10,9 +10,13 @@
 #include <regstr.h>
 
 #include "resource.h"
+#include "macros.h"
 #include "ordinals.h"
 
-#include "utils.h"
+// from utils.c
+extern HPALETTE PaletteFromHDC(HDC hdc);
+extern void GetRealWindowsDirectory(char *directory, int length);
+extern BOOL _PathStripToRoot(LPSTR path);
 
 // #define CENTER_WINDOW
 

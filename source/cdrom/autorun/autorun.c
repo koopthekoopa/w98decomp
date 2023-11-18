@@ -1,6 +1,28 @@
-#include "autorun.h"
+#include "autorun.h"
 
 #define IDB_BACKDROP_16 200
+
+#define RESBUTTON_INTERACTIVE_CD	100
+#define RESBUTTON_COOL_VIDEOS	110
+#define RESBUTTON_BROWSE_CD		120
+#define RESBUTTON_WINDOWS_SETUP	130
+
+#define IDBUTTON_WINDOWS_SETUP 3
+
+#define BUTTON_START_Y 126
+
+#define BUTTON_WIDTH 334
+#define BUTTON_HEIGHT 59
+
+#define BUTTON_COLOR_4BIT				RGB(128, 128, 128)
+#define BUTTON_HIGHLIGHT_COLOR_4BIT		RGB(0, 0, 0)
+#define BUTTON_DISABLED_COLOR_4BIT		RGB(64, 64, 64)
+#define BUTTON_DESCRIPTION_COLOR_4BIT	RGB(64, 64, 64)
+
+#define BUTTON_COLOR					RGB(75, 90, 129)
+#define BUTTON_HIGHLIGHT_COLOR			RGB(0, 0, 0)
+#define BUTTON_DISABLED_COLOR			RGB(107, 136, 185)
+#define BUTTON_DESCRIPTION_COLOR		RGB(0, 0, 0)
 
 enum {
 	RootNone = 0, /* app doesnt need relative directory */
@@ -12,9 +34,15 @@ enum {
 
 #define ROOT(app, parms, dir) ((app << 6) | (parms << 3) | dir)
 
-#define CMD_ROOT(item) ((item) >> 6)
+#define EXEC_ROOT(item) ((item) >> 6)
 #define PARAMS_ROOT(item) (((item) >> 3) & RootMax)
 #define DIR_ROOT(item) (item & RootMax)
+
+#define GetName(x) x + 1
+#define GetDesc(x) x + 2
+#define GetExec(x) x + 3
+#define GetParam(x) x + 4
+#define GetDir(x) x + 5
 
 typedef struct {
 	HWND hWnd;
@@ -56,32 +84,32 @@ HCURSOR g_mainCursor = NULL;
 
 HINSTANCE g_hInst = NULL;
 
-BOOL g_fHas4BitDisplay = FALSE;
-BOOL g_fHasPalette = FALSE;
-BOOL g_fMouseAvailable = FALSE;
-BOOL fEnableSetup = FALSE;
-BOOL g_fAppDisabled = TRUE;
+BOOL g_has4BitDisplay = FALSE;
+BOOL g_hasPalette = FALSE;
+BOOL g_mouseAvailable = FALSE;
+BOOL g_enableSetup = FALSE;
+BOOL g_appDisabled = TRUE;
 
 HHOOK g_hMouseHook = NULL;
 
 HWND g_hMainWindow = NULL;
 
-int g_iActiveButton = -2;
+int g_activeButton = -2;
 
 AutoRunButton g_autoRunButtons[] = {
-	{ 0x64, ROOT(RootCD, RootNone, RootCD), 0, 0, 0, 0, 334, 59, 0, 0, 0, 0, 0, NULL, NULL, 0}, // interactive cd sampler
-	{ 0x6e, ROOT(RootNone, RootCD, RootCD), 0, 0, 0, 0, 334, 59, 0, 0, 0, 0, 0, NULL, NULL, 0}, // cool video clips
-	{ 0x78, ROOT(RootNone, RootCD, RootCD), 0, 0, 0, 0, 334, 59, 0, 0, 0, 0, 0, NULL, NULL, 0}, // browse cd
-	{ 0x82, ROOT(RootNone, RootNone, RootSys), 0, 0, 0, 0, 334, 59, 0, 0, 0, 0, 0, NULL, NULL, 0}, // add/remove software
+	{ RESBUTTON_INTERACTIVE_CD,	ROOT(RootCD, RootNone, RootCD),		0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // interactive cd sampler
+	{ RESBUTTON_COOL_VIDEOS,		ROOT(RootNone, RootCD, RootCD),		0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // cool video clips
+	{ RESBUTTON_BROWSE_CD,		ROOT(RootNone, RootCD, RootCD),		0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // browse cd
+	{ RESBUTTON_WINDOWS_SETUP,	ROOT(RootNone, RootNone, RootSys),	0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // add/remove software
 };
 
 #define AUTORUN_MAX_BUTTONS ARRAY_SIZE(g_autoRunButtons)
 
 COLORREF g_buttonColors[] = {
-	RGB(255, 49, 0),
-	RGB(255, 206, 8),
-	RGB(132, 214, 82),
-	RGB(0, 156, 255),
+	RGB(255,49,0),
+	RGB(255,206,8),
+	RGB(132,214,82),
+	RGB(0,156,255),
 };
 
 HPEN g_buttonPens[] = {
@@ -93,9 +121,10 @@ HPEN g_buttonPens[] = {
 
 static const char c_szAutoRunPrevention[] = "__Win95SetupDiskQuery";
 static const char c_szAutoRunClass[] = "AutoRunMain";
-static const char c_szDefFont[] = "Arial";
+static const char c_szDefFontName[] = "Arial";
 
-static const int c_iWsStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+static const int c_wsStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+static const int c_defFontSize = 19;
 
 // AUTORUN.EXE:0x004010b8
 LONG AutoRunStrToLong(LPCSTR str) {
@@ -155,7 +184,7 @@ void AutoRunInitButtons(AutoRunUserData* data) {
 	for (i = 0; i < AUTORUN_MAX_BUTTONS; i++) {
 		hWnd = NULL;
 
-		if (g_autoRunButtons[i].resource != -1 && !g_fHas4BitDisplay) {
+		if (g_autoRunButtons[i].resource != -1 && !g_has4BitDisplay) {
 			hWnd = AutoRunCreateButton(data);
 		}
 
@@ -165,17 +194,17 @@ void AutoRunInitButtons(AutoRunUserData* data) {
 
 			g_autoRunButtons[i].prevProc = (WNDPROC)SetWindowLong(hWnd, GWL_WNDPROC, (LONG)AutoRunButtonProc);
 
-			SetWindowPos(hWnd, NULL, g_autoRunButtons[i].x, g_autoRunButtons[i].y, 334, 44, SWP_NOZORDER | SWP_NOACTIVATE);
+			SetWindowPos(hWnd, NULL, g_autoRunButtons[i].x, g_autoRunButtons[i].y, BUTTON_WIDTH, (BUTTON_HEIGHT - 15), SWP_NOZORDER | SWP_NOACTIVATE);
 
-			LoadString(g_hInst, g_autoRunButtons[i].resource + 1, g_autoRunButtons[i].text, sizeof(g_autoRunButtons[i].text));
-			LoadString(g_hInst, g_autoRunButtons[i].resource + 2, g_autoRunButtons[i].description, sizeof(g_autoRunButtons[i].description));
+			LoadString(g_hInst, GetName(g_autoRunButtons[i].resource), g_autoRunButtons[i].text, sizeof(g_autoRunButtons[i].text));
+			LoadString(g_hInst, GetDesc(g_autoRunButtons[i].resource), g_autoRunButtons[i].description, sizeof(g_autoRunButtons[i].description));
 
 			SetRect(&g_autoRunButtons[i].textLoc, 0, lineY - 32, 286, lineY);
 			InvalidateRect(data->hWnd, &g_autoRunButtons[i].textLoc, FALSE);
 
 			g_buttonPens[i] = CreatePen(PS_SOLID, 2, g_buttonColors[i]);
 		}
-		lineY += 59;
+		lineY += BUTTON_HEIGHT;
 	}
 }
 
@@ -183,7 +212,7 @@ void AutoRunInitButtons(AutoRunUserData* data) {
 void AutoRunClean(AutoRunUserData* data) {
 	int i = 0;
 
-	if (g_iActiveButton >= 0) {
+	if (g_activeButton >= 0) {
 		data->useKeyboard = FALSE;
 		SendMessage(data->hWnd, WM_APP, TRUE, (LPARAM)-1);
 	}
@@ -278,14 +307,14 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 		goto exit;
 	}
 
-	if (g_fHasPalette) {
+	if (g_hasPalette) {
 		data->hPal = PaletteFromHDC(data->hDc);
 		if (!data->hPal) {
 			goto exit;
 		}
 	}
 
-	if (AutoRunBuildPath(command, g_autoRunButtons[0].resource + 3, CMD_ROOT(g_autoRunButtons[0].resource)) && PathFileExists(command)) {
+	if (AutoRunBuildPath(command, GetExec(g_autoRunButtons[0].resource), EXEC_ROOT(g_autoRunButtons[0].resource)) && PathFileExists(command)) {
 		// right here is an if statement but has nothing
 	}
 
@@ -295,20 +324,20 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 
 	GetObject(cs->lpCreateParams, sizeof(unk0), &unk0); // does nothing whatsoever
 
-	btnY = 126;
+	btnY = BUTTON_START_Y;
 	for (i = 0; i < AUTORUN_MAX_BUTTONS; i++) {
 		if (g_autoRunButtons[i].resource != -1) {
 			g_autoRunButtons[i].x = 0;
 			g_autoRunButtons[i].y = btnY;
 		}
 
-		btnY += 59;
+		btnY += BUTTON_HEIGHT;
 	}
 
 	{
 		HDC hDc = GetDC(NULL);
 		LOGFONT logFont = {
-			19,
+			c_defFontSize,
 			0,
 			0,
 			0,
@@ -324,11 +353,11 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 			0,
 		};
 
-		if (!LoadString(g_hInst, (10), logFont.lfFaceName, sizeof(logFont.lfFaceName))) {
-			lstrcpy(logFont.lfFaceName, c_szDefFont);
+		if (!LoadString(g_hInst, IDS_DEFAULTFONTNAME, logFont.lfFaceName, sizeof(logFont.lfFaceName))) {
+			lstrcpy(logFont.lfFaceName, c_szDefFontName);
 		}
 
-		if (LoadString(g_hInst, (11), weightBuf, sizeof(weightBuf))) {
+		if (LoadString(g_hInst, IDS_DEFAULTFONTSIZE, weightBuf, sizeof(weightBuf))) {
 			logFont.lfHeight = AutoRunStrToLong(weightBuf);
 		}
 
@@ -338,21 +367,21 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 		}
 	}
 
-	if (g_fHas4BitDisplay) {
-		data->colHigh = 0xFFFFFF;
-		data->colDisabled = 0x7F7F7F;
-		data->colNormal = 0xC0C0C0;
-		data->colDesc = 0xC0C0C0;
+	if (g_has4BitDisplay) {
+		data->colHigh = BUTTON_HIGHLIGHT_COLOR_4BIT;
+		data->colDisabled = BUTTON_DISABLED_COLOR_4BIT;
+		data->colNormal = BUTTON_COLOR_4BIT;
+		data->colDesc = BUTTON_DESCRIPTION_COLOR_4BIT;
 	}
 	else {
-		data->colHigh = RGB(0, 0, 0);
-		data->colDisabled = RGB(107, 136, 185);
-		data->colNormal = RGB(75, 90, 129);
-		data->colDesc = RGB(0, 0, 0);
+		data->colHigh = BUTTON_HIGHLIGHT_COLOR;
+		data->colDisabled = BUTTON_DISABLED_COLOR;
+		data->colNormal = BUTTON_COLOR;
+		data->colDesc = BUTTON_DESCRIPTION_COLOR;
 
 		// Get button bitmap data.
 		{
-			HRSRC hResId = FindResource(g_hInst, MAKEINTRESOURCE(203), RT_BITMAP);
+			HRSRC hResId = FindResource(g_hInst, MAKEINTRESOURCE(IDB_BUTTONS_HOVER), RT_BITMAP);
 			HGLOBAL hRes = LoadResource(g_hInst, hResId);
 
 			if (hResId && hRes) {
@@ -360,7 +389,7 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 			}
 
 			if (data->hBtnBmp) {
-				hResId = FindResource(g_hInst, MAKEINTRESOURCE(204), RT_BITMAP);
+				hResId = FindResource(g_hInst, MAKEINTRESOURCE(IDB_BUTTONS_NOHOVER), RT_BITMAP);
 				hRes = LoadResource(g_hInst, hResId);
 
 				if (hResId && hRes) {
@@ -449,7 +478,7 @@ void AutoRunPaint(AutoRunUserData* data) {
 
 	for (i = 0; i < AUTORUN_MAX_BUTTONS; i++) {
 		if (g_autoRunButtons[i].hWnd) {
-			color = (g_iActiveButton == i) ? data->colHigh : (IsWindowEnabled(g_autoRunButtons[i].hWnd) ? data->colNormal : data->colDisabled);
+			color = (g_activeButton == i) ? data->colHigh : (IsWindowEnabled(g_autoRunButtons[i].hWnd) ? data->colNormal : data->colDisabled);
 		}
 
 		if (textColor != color) {
@@ -471,29 +500,29 @@ void AutoRunPaint(AutoRunUserData* data) {
 		bmpPosSrc += 32;
 	}
 
-	if (g_iActiveButton >= 0) {
+	if (g_activeButton >= 0) {
 		client.x = client.y = 0;
 
 		if (data->colDesc != textColor) {
 			SetTextColor(hDc, data->colDesc);
 		}
 
-		SetRect(&newTextRect, g_autoRunButtons[g_iActiveButton].textLoc.right, 0, g_autoRunButtons[g_iActiveButton].textLoc.right + 250, 0);
+		SetRect(&newTextRect, g_autoRunButtons[g_activeButton].textLoc.right, 0, g_autoRunButtons[g_activeButton].textLoc.right + 250, 0);
 		OffsetRect(&newTextRect, 48, 0);
-		DrawText(hDc, g_autoRunButtons[g_iActiveButton].description, -1, &newTextRect, DT_CALCRECT | DT_WORDBREAK);
+		DrawText(hDc, g_autoRunButtons[g_activeButton].description, -1, &newTextRect, DT_CALCRECT | DT_WORDBREAK);
 
 		ClientToScreen(data->hWnd, &client);
-		GetWindowRect(g_autoRunButtons[g_iActiveButton].hWnd, &rect);
+		GetWindowRect(g_autoRunButtons[g_activeButton].hWnd, &rect);
 		OffsetRect(&rect, -client.x, -client.y);
 
 		client.x = newTextRect.bottom - newTextRect.top;
 		newTextRect.top = rect.bottom - 35;
 		newTextRect.bottom = client.x + newTextRect.top;
 
-		DrawText(hDc, g_autoRunButtons[g_iActiveButton].description, -1, &newTextRect, DT_WORDBREAK);
+		DrawText(hDc, g_autoRunButtons[g_activeButton].description, -1, &newTextRect, DT_WORDBREAK);
 
 		bmInfo = (BITMAPINFO*)data->hBtnBmp;
-		SetDIBitsToDevice(hDc, g_autoRunButtons[g_iActiveButton].textLoc.right + 6, g_autoRunButtons[g_iActiveButton].textLoc.top - 2, 32, 32, g_iActiveButton << 5, 0, 0, 32, bmInfo->bmiColors + (1 << (bmInfo->bmiHeader.biBitCount & 0x1f)), bmInfo, DIB_RGB_COLORS);
+		SetDIBitsToDevice(hDc, g_autoRunButtons[g_activeButton].textLoc.right + 6, g_autoRunButtons[g_activeButton].textLoc.top - 2, 32, 32, g_activeButton << 5, 0, 0, 32, bmInfo->bmiColors + (1 << (bmInfo->bmiHeader.biBitCount & 0x1f)), bmInfo, DIB_RGB_COLORS);
 	}
 
 	if (textFont) {
@@ -516,9 +545,9 @@ void AutoRunActivateButton(AutoRunUserData* data, int index) {
 		}
 	}
 
-	if (index != g_iActiveButton) {
+	if (index != g_activeButton) {
 		newBtn = (index >= 0) ? &g_autoRunButtons[index] : NULL;
-		oldBtn = (g_iActiveButton >= 0) ? &g_autoRunButtons[g_iActiveButton] : NULL;
+		oldBtn = (g_activeButton >= 0) ? &g_autoRunButtons[g_activeButton] : NULL;
 
 		if (oldBtn) {
 			RECT rect = oldBtn->textLoc;
@@ -526,7 +555,7 @@ void AutoRunActivateButton(AutoRunUserData* data, int index) {
 			InvalidateRect(data->hWnd, &rect, TRUE);
 		}
 
-		g_iActiveButton = index;
+		g_activeButton = index;
 
 		if (newBtn) {
 			RECT rect = newBtn->textLoc;
@@ -535,14 +564,14 @@ void AutoRunActivateButton(AutoRunUserData* data, int index) {
 
 			SetFocus(newBtn->hWnd);
 
-			if (g_fMouseAvailable && !data->useKeyboard) {
+			if (g_mouseAvailable && !data->useKeyboard) {
 				SetTimer(data->hWnd, AUTORUN_MOUSE_EVENT, 333, NULL);
 			}
 		}
 		else {
 			SetFocus(data->hWnd);
 
-			if (g_fMouseAvailable) {
+			if (g_mouseAvailable) {
 				KillTimer(data->hWnd, AUTORUN_MOUSE_EVENT);
 			}
 		}
@@ -554,7 +583,7 @@ void AutoRunActivateButton(AutoRunUserData* data, int index) {
 // AUTORUN.EXE:0x00401b9d
 void AutoRunButtonOnMouse(AutoRunUserData* data, int index, BOOL force) {
 	if (index >= 0 || !data->useKeyboard || force) {
-		data->useKeyboard = !g_fMouseAvailable;
+		data->useKeyboard = !g_mouseAvailable;
 		AutoRunActivateButton(data, index);
 	}
 }
@@ -565,7 +594,7 @@ int AutoRunProcessButton(HWND hWnd, LPPOINT location) {
 	POINT point;
 
 	if (GetAsyncKeyState(VK_LBUTTON) < 0) {
-		return g_iActiveButton;
+		return g_activeButton;
 	}
 
 	if (hWnd && IsWindowEnabled(hWnd) && GetParent(hWnd) == g_hMainWindow) {
@@ -593,7 +622,7 @@ void AutoRunDetectButton(AutoRunUserData* data) {
 	if (!data->useKeyboard) {
 		index = -1;
 
-		if (!g_fAppDisabled) {
+		if (!g_appDisabled) {
 			GetCursorPos(&curPoint);
 
 			hWnd = WindowFromPoint(curPoint);
@@ -601,7 +630,7 @@ void AutoRunDetectButton(AutoRunUserData* data) {
 				index = AutoRunProcessButton(hWnd, &curPoint);
 			}
 		}
-		if (index != g_iActiveButton) {
+		if (index != g_activeButton) {
 			AutoRunButtonOnMouse(data, index, FALSE);
 		}
 	}
@@ -658,12 +687,12 @@ void AutoRunClickButton(AutoRunUserData* data, int btnId) {
 	if (btnId >= 0 && btnId < AUTORUN_MAX_BUTTONS) {
 		PlaySound(MAKEINTRESOURCE(2), g_hInst, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
 		if (AutoRunCDInDrive(data->hWnd)) {
-			if (AutoRunBuildPath(command, g_autoRunButtons[btnId].resource + 3, CMD_ROOT(g_autoRunButtons[btnId].root))) {
-				if (AutoRunBuildPath(params, g_autoRunButtons[btnId].resource + 4, PARAMS_ROOT(g_autoRunButtons[btnId].root))) {
-					AutoRunBuildPath(dir, g_autoRunButtons[btnId].resource + 5, DIR_ROOT(g_autoRunButtons[btnId].root));
+			if (AutoRunBuildPath(command, GetExec(g_autoRunButtons[btnId].resource), EXEC_ROOT(g_autoRunButtons[btnId].root))) {
+				if (AutoRunBuildPath(params, GetParam(g_autoRunButtons[btnId].resource), PARAMS_ROOT(g_autoRunButtons[btnId].root))) {
+					AutoRunBuildPath(dir, GetDir(g_autoRunButtons[btnId].resource), DIR_ROOT(g_autoRunButtons[btnId].root));
 				}
 			}
-			if (g_autoRunButtons[btnId].resource == 130 && fEnableSetup) {
+			if (g_autoRunButtons[btnId].resource == 130 && g_enableSetup) {
 				AutoRunLaunchSetup(data->hWnd);
 			}
 			else {
@@ -675,7 +704,7 @@ void AutoRunClickButton(AutoRunUserData* data, int btnId) {
 
 // AUTORUN.EXE:0x00401ed7
 void AutoRunHandleKeys(AutoRunUserData* data, TCHAR key) {
-	int button = g_iActiveButton;
+	int button = g_activeButton;
 	int position = 0;
 	int i;
 
@@ -685,8 +714,8 @@ void AutoRunHandleKeys(AutoRunUserData* data, TCHAR key) {
 		break;
 	}
 	case VK_RETURN: {
-		if (g_iActiveButton >= 0) {
-			AutoRunClickButton(data, g_iActiveButton);
+		if (g_activeButton >= 0) {
+			AutoRunClickButton(data, g_activeButton);
 		}
 	}
 	case VK_ESCAPE: {
@@ -735,14 +764,14 @@ void AutoRunHandleKeys(AutoRunUserData* data, TCHAR key) {
 		data->useKeyboard = TRUE;
 	}
 	else {
-		data->useKeyboard = !g_fMouseAvailable;
+		data->useKeyboard = !g_mouseAvailable;
 	}
 
 	AutoRunActivateButton(data, button);
 }
 
 // AUTORUN.EXE:0x00402002
-/* help needed on this part - deobfuscate this ! */
+/* deobfuscate this ! */
 BOOL AutoRunCheckVersion(AutoRunUserData* data) {
 	OSVERSIONINFO osver = { sizeof(osver), 0, 0, 0, 0, 0 };
 	BOOL disableSetup = FALSE;
@@ -751,40 +780,40 @@ BOOL AutoRunCheckVersion(AutoRunUserData* data) {
 	int msgButton;
 
 	if (!GetVersionEx(&osver)) {
-		message = 5;
+		message = IDS_VERSIONFAIL;
 		msgtype = MB_OK | MB_ICONSTOP;
 		goto returnPoint;
 	}
 
-	if (osver.dwPlatformId == 1) {
-		fEnableSetup = FALSE;
-		if (((osver.dwMajorVersion <= 4) &&
-			((osver.dwMajorVersion != 4 || (osver.dwMinorVersion <= 10)))) &&
-			((osver.dwMajorVersion != 4 ||
-				((osver.dwMinorVersion != 10 || (osver.dwBuildNumber <= 0x40a07ce)))))) {
-			if ((osver.dwMajorVersion < 4) ||
-				((osver.dwMajorVersion == 4 &&
-					((osver.dwMinorVersion < 10 ||
-						((osver.dwMinorVersion == 10 && (osver.dwBuildNumber < 0x40a07ce)))))))) {
-				fEnableSetup = TRUE;
+	if (osver.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS) {
+		g_enableSetup = FALSE;
+		if (((osver.dwMajorVersion <= VER_MAJOR_NUMBER) &&
+			((osver.dwMajorVersion != VER_MAJOR_NUMBER || (osver.dwMinorVersion <= VER_MINOR_NUMBER)))) &&
+			((osver.dwMajorVersion != VER_MAJOR_NUMBER ||
+				((osver.dwMinorVersion != VER_MINOR_NUMBER || (osver.dwBuildNumber <= VER_BUILD_NUMBER)))))) {
+			if ((osver.dwMajorVersion < VER_MAJOR_NUMBER) ||
+				((osver.dwMajorVersion == VER_MAJOR_NUMBER &&
+					((osver.dwMinorVersion < VER_MINOR_NUMBER ||
+						((osver.dwMinorVersion == VER_MINOR_NUMBER && (osver.dwBuildNumber < VER_BUILD_NUMBER)))))))) {
+				g_enableSetup = TRUE;
 			}
-			if (fEnableSetup) {
-				message = 8;
-				msgtype = 0x23;
+			if (g_enableSetup) {
+				message = IDS_VERSIONNEW;
+				msgtype = MB_ICONQUESTION | MB_YESNOCANCEL;
 			}
 			goto returnPoint;
 		}
-		message = 7;
-		msgtype = 0x30;
+		message = IDS_VERSIONOLD;
+		msgtype = MB_ICONWARNING;
 	}
 	disableSetup = TRUE;
 
 returnPoint:
 	if (disableSetup) {
-		AutoRunToggleButton(data, 3, FALSE);
+		AutoRunToggleButton(data, IDBUTTON_WINDOWS_SETUP, FALSE);
 	}
 	if (msgtype != 0) {
-		ShowWindow(data->hWnd, 1);
+		ShowWindow(data->hWnd, SW_SHOWNORMAL);
 
 		msgButton = ShellMessageBoxA(g_hInst, data->hWnd, MAKEINTRESOURCE(message), MAKEINTRESOURCE(1), msgtype);
 		if (msgButton == IDYES) {
@@ -803,9 +832,9 @@ LRESULT CALLBACK AutoRunMouseHook(int code, WPARAM wParam, LPARAM lParam) {
 	int id;
 
 	if (code >= 0) {
-		id = g_fAppDisabled ? -1 : AutoRunProcessButton(((MOUSEHOOKSTRUCT*)lParam)->hwnd, &((MOUSEHOOKSTRUCT*)lParam)->pt);
+		id = g_appDisabled ? -1 : AutoRunProcessButton(((MOUSEHOOKSTRUCT*)lParam)->hwnd, &((MOUSEHOOKSTRUCT*)lParam)->pt);
 
-		if (id != g_iActiveButton) {
+		if (id != g_activeButton) {
 			PostMessage(g_hMainWindow, WM_APP, FALSE, id);
 		}
 	}
@@ -845,7 +874,7 @@ LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 		break;
 	}
 	case WM_ACTIVATE: {
-		g_fAppDisabled = (LOWORD(wParam) == WA_INACTIVE || HIWORD(wParam));
+		g_appDisabled = (LOWORD(wParam) == WA_INACTIVE || HIWORD(wParam));
 		AutoRunDetectButton(data);
 
 		unk = g_hMainWindow;
@@ -970,30 +999,34 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Windows 98's autorun program uses Windows 95's autorun as a base.
 	// Originally this would check the monitor to see if it is running on 16 colors so it can display a different background.
 	// But because no such 16 color background exists in Windows 98's autorun, this will always be FALSE resulting the 256 color background being used all the time.
-	g_fHas4BitDisplay = FALSE;
-	g_fHasPalette = (BOOL)((GetDeviceCaps(hDcMonitor, RASTERCAPS) & RC_PALETTE) != 0);
+	g_has4BitDisplay = FALSE;
+	g_hasPalette = (BOOL)((GetDeviceCaps(hDcMonitor, RASTERCAPS) & RC_PALETTE) != 0);
 
 	ReleaseDC(NULL, hDcMonitor);
 
-	hbBackground = LoadImage(g_hInst, MAKEINTRESOURCE(g_fHas4BitDisplay ? IDB_BACKDROP_16 /* unused */ : IDB_BACKDROP_256), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
+	hbBackground = LoadImage(g_hInst, MAKEINTRESOURCE(g_has4BitDisplay ? IDB_BACKDROP_16 /* unused */ : IDB_BACKDROP_256), IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION);
 
 	if (!hbBackground) {
 		goto exit;
 	}
 
-	if ((g_fMouseAvailable = (BOOL)(GetSystemMetrics(SM_MOUSEPRESENT) != FALSE)) != FALSE) {
+	if ((g_mouseAvailable = (BOOL)(GetSystemMetrics(SM_MOUSEPRESENT) != FALSE)) != FALSE) {
 		g_hMouseHook = SetWindowsHookEx(WH_MOUSE, AutoRunMouseHook, g_hInst, GetCurrentThreadId());
 	}
 
 	GetObject(hbBackground, sizeof(bBackground), &bBackground);
 
 	rect.left = (GetSystemMetrics(SM_CXSCREEN) - bBackground.bmWidth) / 2;
+#ifdef CENTER_WINDOW
+	rect.top = (GetSystemMetrics(SM_CYSCREEN) - bBackground.bmHeight) / 2;
+#else
 	rect.top = (GetSystemMetrics(SM_CYSCREEN) - bBackground.bmHeight) / 3;
+#endif
 	rect.right = rect.left + bBackground.bmWidth;
 	rect.bottom = rect.top + bBackground.bmHeight;
 
-	AdjustWindowRect(&rect, c_iWsStyle, FALSE);
-	g_hMainWindow = CreateWindow(c_szAutoRunClass, szAppTitle, c_iWsStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, g_hInst, hbBackground);
+	AdjustWindowRect(&rect, c_wsStyle, FALSE);
+	g_hMainWindow = CreateWindow(c_szAutoRunClass, szAppTitle, c_wsStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, g_hInst, hbBackground);
 
 	if (g_hMainWindow) {
 		while (GetMessage(&msg, NULL, 0, 0)) {
@@ -1038,7 +1071,7 @@ int _stdcall WinEntry() {
 		pszCmdLine++;
 	}
 
-	start.dwFlags = 0;
+	start.dwFlags = STARTF_USESHOWWINDOW;
 	GetStartupInfoA(&start);
 
 	ret = WinMain(GetModuleHandle(NULL), NULL, pszCmdLine, (start.dwFlags & STARTF_USESHOWWINDOW) ? start.wShowWindow : SW_SHOWDEFAULT);

@@ -1,4 +1,5 @@
-#include "autorun.h"
+#include <windows.h>
+#include "ordinals.h"
 
 // AUTORUN.EXE:0x004026e0
 HPALETTE PaletteFromHDC(HDC hdc) {
