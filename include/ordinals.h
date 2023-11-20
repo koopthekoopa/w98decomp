@@ -9,7 +9,7 @@ WINSHELLAPI BOOL WINAPI PathIsRoot(LPCSTR pszPath); // 29
 WINSHELLAPI BOOL WINAPI PathRemoveFileSpec(LPSTR pszPath); // 35
 WINSHELLAPI BOOL WINAPI PathAppend(LPSTR pszPath, LPCSTR pszMore); // 36
 WINSHELLAPI BOOL WINAPI PathFileExists(LPCSTR pszPath); // 45
-WINSHELLAPI int WINAPI ShellMessageBox(HINSTANCE hAppInst, HWND hWnd, LPCSTR pszText, LPCSTR pszTitle, UINT fuStyle); // 183
+WINSHELLAPI int WINAPI ShellMessageBoxA(HINSTANCE hAppInst, HWND hWnd, LPCSTR pszText, LPCSTR pszTitle, UINT fuStyle); // 183
 
 /// WINMM
 
