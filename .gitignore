@@ -57,7 +57,6 @@ tools/*
 Makefile
 README_old.md
 ref.txt
-source/system/*
 BuildWin.bat
 Up2Git.bat
 
