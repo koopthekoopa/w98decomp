@@ -1,18 +1,18 @@
 #include "autorun.h"
 
-#define IDB_BACKDROP_16 200
+#define IDB_BACKDROP_16					200
 
-#define RESBUTTON_INTERACTIVE_CD	100
-#define RESBUTTON_COOL_VIDEOS	110
-#define RESBUTTON_BROWSE_CD		120
-#define RESBUTTON_WINDOWS_SETUP	130
+#define RESBUTTON_INTERACTIVE_CD		100
+#define RESBUTTON_COOL_VIDEOS			110
+#define RESBUTTON_BROWSE_CD				120
+#define RESBUTTON_WINDOWS_SETUP			130
 
-#define IDBUTTON_WINDOWS_SETUP 3
+#define IDBUTTON_WINDOWS_SETUP			3
 
-#define BUTTON_START_Y 126
+#define BUTTON_START_Y					126
 
-#define BUTTON_WIDTH 334
-#define BUTTON_HEIGHT 59
+#define BUTTON_WIDTH					334
+#define BUTTON_HEIGHT					59
 
 #define BUTTON_COLOR_4BIT				RGB(128, 128, 128)
 #define BUTTON_HIGHLIGHT_COLOR_4BIT		RGB(0, 0, 0)
@@ -23,6 +23,11 @@
 #define BUTTON_HIGHLIGHT_COLOR			RGB(0, 0, 0)
 #define BUTTON_DISABLED_COLOR			RGB(107, 136, 185)
 #define BUTTON_DESCRIPTION_COLOR		RGB(0, 0, 0)
+
+#define BUTTON_1_COLOR					RGB(255, 49, 0)
+#define BUTTON_2_COLOR					RGB(255, 206, 8)
+#define BUTTON_3_COLOR					RGB(132, 214, 82)
+#define BUTTON_4_COLOR					RGB(0, 156, 255)
 
 enum {
 	RootNone = 0, /* app doesnt need relative directory */
@@ -48,9 +53,9 @@ typedef struct {
 	HWND hWnd;
 
 	HDC hDc;
-	HBITMAP hPrevBmp;
-	HBITMAP hBtnBmp;
-	HBITMAP hPrevBtnBmp;
+	HBITMAP hUnkBmp;
+	HBITMAP hBtnNormal;
+	HBITMAP hBtnHigh;
 
 	HPALETTE hPal;
 
@@ -106,10 +111,10 @@ AutoRunButton g_autoRunButtons[] = {
 #define AUTORUN_MAX_BUTTONS ARRAY_SIZE(g_autoRunButtons)
 
 COLORREF g_buttonColors[] = {
-	RGB(255,49,0),
-	RGB(255,206,8),
-	RGB(132,214,82),
-	RGB(0,156,255),
+	BUTTON_1_COLOR,
+	BUTTON_2_COLOR,
+	BUTTON_3_COLOR,
+	BUTTON_4_COLOR,
 };
 
 HPEN g_buttonPens[] = {
@@ -218,9 +223,9 @@ void AutoRunClean(AutoRunUserData* data) {
 	}
 
 	if (data->hDc) {
-		if (data->hPrevBmp) {
-			SelectBitmap(data->hDc, data->hPrevBmp);
-			data->hPrevBmp = NULL;
+		if (data->hUnkBmp) {
+			SelectBitmap(data->hDc, data->hUnkBmp);
+			data->hUnkBmp = NULL;
 		}
 		DeleteDC(data->hDc);
 		data->hDc = NULL;
@@ -302,8 +307,8 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 		goto exit;
 	}
 
-	data->hPrevBmp = SelectBitmap(data->hDc, (HBITMAP)cs->lpCreateParams);
-	if (!data->hPrevBmp) {
+	data->hUnkBmp = SelectBitmap(data->hDc, (HBITMAP)cs->lpCreateParams);
+	if (!data->hUnkBmp) {
 		goto exit;
 	}
 
@@ -385,19 +390,19 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 			HGLOBAL hRes = LoadResource(g_hInst, hResId);
 
 			if (hResId && hRes) {
-				data->hBtnBmp = LockResource(hRes);
+				data->hBtnNormal = LockResource(hRes);
 			}
 
-			if (data->hBtnBmp) {
+			if (data->hBtnNormal) {
 				hResId = FindResource(g_hInst, MAKEINTRESOURCE(IDB_BUTTONS_NOHOVER), RT_BITMAP);
 				hRes = LoadResource(g_hInst, hResId);
 
 				if (hResId && hRes) {
-					data->hPrevBtnBmp = LockResource(hRes);
+					data->hBtnHigh = LockResource(hRes);
 				}
 
-				if (data->hPrevBtnBmp) {
-					g_mainCursor = LoadCursor(g_hInst, MAKEINTRESOURCE(300));
+				if (data->hBtnHigh) {
+					g_mainCursor = LoadCursor(g_hInst, MAKEINTRESOURCE(IDC_CURSOR_HAND));
 				}
 				else {
 					goto exit;
@@ -494,7 +499,7 @@ void AutoRunPaint(AutoRunUserData* data) {
 
 		SelectObject(hDc, colorObj);
 
-		bmInfo = (BITMAPINFO*)data->hPrevBtnBmp;
+		bmInfo = (BITMAPINFO*)data->hBtnHigh;
 		SetDIBitsToDevice(hDc, g_autoRunButtons[i].textLoc.right + 6, g_autoRunButtons[i].textLoc.top - 2, 32, 32, bmpPosSrc, 0, 0, 32, bmInfo->bmiColors + (1 << (bmInfo->bmiHeader.biBitCount & 0x1f)), bmInfo, DIB_RGB_COLORS);
 
 		bmpPosSrc += 32;
@@ -521,7 +526,7 @@ void AutoRunPaint(AutoRunUserData* data) {
 
 		DrawText(hDc, g_autoRunButtons[g_activeButton].description, -1, &newTextRect, DT_WORDBREAK);
 
-		bmInfo = (BITMAPINFO*)data->hBtnBmp;
+		bmInfo = (BITMAPINFO*)data->hBtnNormal;
 		SetDIBitsToDevice(hDc, g_autoRunButtons[g_activeButton].textLoc.right + 6, g_autoRunButtons[g_activeButton].textLoc.top - 2, 32, 32, g_activeButton << 5, 0, 0, 32, bmInfo->bmiColors + (1 << (bmInfo->bmiHeader.biBitCount & 0x1f)), bmInfo, DIB_RGB_COLORS);
 	}
 
@@ -655,7 +660,7 @@ BOOL AutoRunCDInDrive(HWND hWnd) {
 	GetModuleFileName(g_hInst, fileName, sizeof(fileName));
 
 	while (!PathFileExists(fileName)) {
-		if (ShellMessageBoxA(g_hInst, hWnd, MAKEINTRESOURCE(2), MAKEINTRESOURCE(1), MB_OKCANCEL | MB_ICONERROR) == IDCANCEL) {
+		if (ShellMessageBoxA(g_hInst, hWnd, MAKEINTRESOURCE(IDS_NOCD), MAKEINTRESOURCE(IDS_TITLE), MB_OKCANCEL | MB_ICONERROR) == IDCANCEL) {
 			return FALSE;
 		}
 	}
@@ -685,7 +690,7 @@ void AutoRunClickButton(AutoRunUserData* data, int btnId) {
 	CHAR dir[MAX_PATH];
 
 	if (btnId >= 0 && btnId < AUTORUN_MAX_BUTTONS) {
-		PlaySound(MAKEINTRESOURCE(2), g_hInst, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+		PlaySound(MAKEINTRESOURCE(IDW_BLIP), g_hInst, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
 		if (AutoRunCDInDrive(data->hWnd)) {
 			if (AutoRunBuildPath(command, GetExec(g_autoRunButtons[btnId].resource), EXEC_ROOT(g_autoRunButtons[btnId].root))) {
 				if (AutoRunBuildPath(params, GetParam(g_autoRunButtons[btnId].resource), PARAMS_ROOT(g_autoRunButtons[btnId].root))) {
@@ -815,7 +820,7 @@ returnPoint:
 	if (msgtype != 0) {
 		ShowWindow(data->hWnd, SW_SHOWNORMAL);
 
-		msgButton = ShellMessageBoxA(g_hInst, data->hWnd, MAKEINTRESOURCE(message), MAKEINTRESOURCE(1), msgtype);
+		msgButton = ShellMessageBoxA(g_hInst, data->hWnd, MAKEINTRESOURCE(message), MAKEINTRESOURCE(IDS_TITLE), msgtype);
 		if (msgButton == IDYES) {
 			AutoRunLaunchSetup(data->hWnd);
 		}
