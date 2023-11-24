@@ -1,4 +1,5 @@
 #include <windows.h>
+#include "intrin.h"
 
 HINSTANCE g_hInst = NULL;
 
@@ -11,6 +12,7 @@ HWND g_hWnd = NULL;
 BOOL BOOL_0040f0cc = FALSE;
 
 void FUN_00402fe5(int param_1);
+BOOL EflagsFunctions1();
 
 static const char* szWelcomeRootKey = "Software\\Microsoft\\Windows\\CurrentVersion\\Welcome\\";
 static const char* szWindowClass = "WL98CLASS";
@@ -72,6 +74,7 @@ exit:
 #undef WELCOME_ARG
 }
 
+// WELCOME.EXE:0x00402fe5
 void FUN_00402fe5(BOOL param_1) {
 	LPCSTR unk0;
 	char regKey[128];
@@ -105,6 +108,24 @@ void FUN_00402fe5(BOOL param_1) {
 		RegSetValueEx(hKey, "Welcome", 0, 1, rootKey, lstrlen(rootKey));
 	}
 	RegCloseKey(hKey);
+}
+
+// WELCOME.EXE:0x0040505d
+BOOL EflagsFunctions1() {
+	INT oldFlag, newFlag;
+	BOOL ret;
+	
+	ret = TRUE;
+	
+	oldFlag = __readeflags();
+	__writeeflags(oldFlag ^ 0x200000);
+	newFlag = __readeflags();
+
+	if (oldFlag == newFlag) {
+		ret = FALSE;
+	}
+
+	return ret;
 }
 
 
