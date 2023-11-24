@@ -1,4 +1,4 @@
-#include <windows.h.
+#include <windows.h>
 
 HINSTANCE g_hInst = NULL;
 
@@ -6,7 +6,11 @@ UINT UINT_00410848 = 2;
 
 CHAR* szWindowName[64];
 
-extern void FUN_00402fe5(int param_1);
+HWND g_hWnd = NULL;
+
+BOOL BOOL_0040f0cc = FALSE;
+
+void FUN_00402fe5(int param_1);
 
 static const char* szWelcomeRootKey = "Software\\Microsoft\\Windows\\CurrentVersion\\Welcome\\";
 static const char* szWindowClass = "WL98CLASS";
@@ -14,8 +18,10 @@ static const char* szWindowClass = "WL98CLASS";
 // WELCOME.EXE:0x00401d10
 int WinMain(HINSTANCE hInstnce, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 #define WELCOME_ARG lpCmdLine[1]
+
+	WNDCLASS wc;
 	
-	if (GetSystemMetrics(SM_CLEANBOOT)) { // if not in a clean boot
+	if (GetSystemMetrics(SM_CLEANBOOT)) { // if not in safe mode
 		goto exit;
 	}
 	
@@ -33,7 +39,33 @@ int WinMain(HINSTANCE hInstnce, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nC
 	g_hInst = hInstance;
 	LoadString(hInstance, 2006, szWindowName, sizeof(szWindowName));
 	
-	if (FindWindowA(s_WL98CLASS_00410884, szWindowName);
+	if (FindWindow(szWindowClass, szWindowName)) {
+		SetForegroundWindow(hWnd);
+		goto exit;
+	}
+	
+	if (FUN_004030e8() /* error - function doesn't exist yet */) {
+		FUN_00402b29(0,0x20006, 0, 1); // error - function doesn't exist yet
+		if (WELCOME_ARG == 'B') {
+			g_hWnd = FUN_00402cd3(); // error - function doesn't exist yet
+		}
+		
+		wc.lpszClassName = szWindowClass;
+		wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+		wc.hIcon = LoadIcon(hInstance, MAKEINTRESOUECE(102));
+		wc.lpszMenuName = NULL;
+		wc.hbrBackground = GetStockObject(BOOL_0040f0cc != 0 ? 4 : 0);
+		wc.lpfnWndProc = DefDlgProc;
+		wc.hInstance = hInstance;
+		wc.style = CS_HREDRAW | CS_VREDRAW;
+		wc.cbClsExtra = 0;
+		wc.cbWndExtra = 0x1e; // find out
+		
+		if (RegisterClass(&wc)) {
+			DialogBoxParam(g_hInst, MAKEINTRESOURCE(101), g_hWnd, FUN_00401e55, 0); // error - function FUN_00401e55 doesn't exist yet
+			FUN_0040320f();  // error - function doesn't exist yet
+		}
+	}
 	
 exit:
 	return 0;
