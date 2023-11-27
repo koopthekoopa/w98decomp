@@ -17,6 +17,6 @@ __inline void __writeeflags(UINT x) {
 	}
 }
 
-#endif //  INTRIN_H
+#endif // INTRIN_H
 
 

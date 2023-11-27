@@ -54,10 +54,12 @@ dkms.conf
 # Exclusive
 private/*
 tools/*
+.git2/*
 Makefile
 README_old.md
 ref.txt
 BuildWin.bat
 Up2Git.bat
+win98.iso
 
 
