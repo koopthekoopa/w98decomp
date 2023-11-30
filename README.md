@@ -8,7 +8,7 @@ But it does require an ISO of Windows 98!
 
 ## Progress
 ### CD-ROM
-autorun.exe - 100% decompiled
+autorun.exe - 100% decompiled  
 wb16off.exe - 100% disassembled (untested)
 
 ### System
