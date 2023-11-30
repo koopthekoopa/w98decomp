@@ -2,6 +2,8 @@
 
 #define IDB_BACKDROP_16                  200
 
+#define RESBUTTON_INVALID                -1
+
 #define RESBUTTON_INTERACTIVE_CD         100
 #define RESBUTTON_COOL_VIDEOS            110
 #define RESBUTTON_BROWSE_CD              120
@@ -24,10 +26,10 @@
 #define BUTTON_DISABLED_COLOR            RGB(107, 136, 185)
 #define BUTTON_DESCRIPTION_COLOR         RGB(0, 0, 0)
 
-#define BUTTON_1_COLOR                    RGB(255, 49, 0)
-#define BUTTON_2_COLOR                    RGB(255, 206, 8)
-#define BUTTON_3_COLOR                    RGB(132, 214, 82)
-#define BUTTON_4_COLOR                    RGB(0, 156, 255)
+#define BUTTON_1_COLOR                   RGB(255, 49, 0)
+#define BUTTON_2_COLOR                   RGB(255, 206, 8)
+#define BUTTON_3_COLOR                   RGB(132, 214, 82)
+#define BUTTON_4_COLOR                   RGB(0, 156, 255)
 
 enum {
     RootNone = 0, /* app doesnt need relative directory */
@@ -37,17 +39,17 @@ enum {
     RootMax = RootSys /* for bitwise ops */
 };
 
-#define ROOT(app, parms, dir) ((app << 6) | (parms << 3) | dir)
+#define ROOT(app, parms, dir)  ((app << 6) | (parms << 3) | dir)
 
-#define EXEC_ROOT(item)      ((item) >> 6)
-#define PARAMS_ROOT(item)    (((item) >> 3) & RootMax)
-#define DIR_ROOT(item)       (item & RootMax)
+#define EXEC_ROOT(item)        ((item) >> 6)
+#define PARAMS_ROOT(item)      (((item) >> 3) & RootMax)
+#define DIR_ROOT(item)         (item & RootMax)
 
-#define GetName(x) x + 1
-#define GetDesc(x) x + 2
-#define GetExec(x) x + 3
-#define GetParam(x) x + 4
-#define GetDir(x) x + 5
+#define GetName(x)              x + 1
+#define GetDesc(x)              x + 2
+#define GetExec(x)              x + 3
+#define GetParam(x)             x + 4
+#define GetDir(x)               x + 5
 
 typedef struct {
     HWND hWnd;
@@ -102,10 +104,10 @@ HWND g_hMainWindow = NULL;
 int g_activeButton = -2;
 
 AutoRunButton g_autoRunButtons[] = {
-    { RESBUTTON_INTERACTIVE_CD,    ROOT(RootCD, RootNone, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // interactive cd sampler
-    { RESBUTTON_COOL_VIDEOS,       ROOT(RootNone, RootCD, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // cool video clips
-    { RESBUTTON_BROWSE_CD,         ROOT(RootNone, RootCD, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // browse cd
-    { RESBUTTON_WINDOWS_SETUP,     ROOT(RootNone, RootNone, RootSys),     0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, NULL, NULL, NULL, NULL}, // add/remove software
+    { RESBUTTON_INTERACTIVE_CD,    ROOT(RootCD, RootNone, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, 0, 0, NULL, NULL}, // interactive cd sampler
+    { RESBUTTON_COOL_VIDEOS,       ROOT(RootNone, RootCD, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, 0, 0, NULL, NULL}, // cool video clips
+    { RESBUTTON_BROWSE_CD,         ROOT(RootNone, RootCD, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, 0, 0, NULL, NULL}, // browse cd
+    { RESBUTTON_WINDOWS_SETUP,     ROOT(RootNone, RootNone, RootSys),     0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, 0, 0, NULL, NULL}, // add/remove software
 };
 
 #define AUTORUN_MAX_BUTTONS ARRAY_SIZE(g_autoRunButtons)
@@ -132,8 +134,9 @@ static const int c_wsStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMI
 static const int c_defFontSize = 19;
 
 // AUTORUN.EXE:0x004010b8
+// should've been in utils.c, microsoft
 LONG AutoRunStrToLong(LPCSTR str) {
-    int l = 0;
+    LONG l = 0;
 
     if (*str == '-')
         str++;
@@ -189,7 +192,7 @@ void AutoRunInitButtons(AutoRunUserData* data) {
     for (i = 0; i < AUTORUN_MAX_BUTTONS; i++) {
         hWnd = NULL;
 
-        if (g_autoRunButtons[i].resource != -1 && !g_has4BitDisplay) {
+        if (g_autoRunButtons[i].resource != RESBUTTON_INVALID && !g_has4BitDisplay) {
             hWnd = AutoRunCreateButton(data);
         }
 
@@ -252,7 +255,7 @@ void AutoRunClean(AutoRunUserData* data) {
 BOOL AutoRunBuildPath(char* path, int resource, DWORD root) {
     CHAR directory[MAX_PATH];
 
-    if (resource == -1) {
+    if (resource == RESBUTTON_INVALID) {
         *path = 0; // a hack that makes empty strings.
     }
     else {
@@ -331,7 +334,7 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
 
     btnY = BUTTON_START_Y;
     for (i = 0; i < AUTORUN_MAX_BUTTONS; i++) {
-        if (g_autoRunButtons[i].resource != -1) {
+        if (g_autoRunButtons[i].resource != RESBUTTON_INVALID) {
             g_autoRunButtons[i].x = 0;
             g_autoRunButtons[i].y = btnY;
         }
@@ -697,7 +700,7 @@ void AutoRunClickButton(AutoRunUserData* data, int btnId) {
                     AutoRunBuildPath(dir, GetDir(g_autoRunButtons[btnId].resource), DIR_ROOT(g_autoRunButtons[btnId].root));
                 }
             }
-            if (g_autoRunButtons[btnId].resource == 130 && g_enableSetup) {
+            if (g_autoRunButtons[btnId].resource == RESBUTTON_WINDOWS_SETUP && g_enableSetup) {
                 AutoRunLaunchSetup(data->hWnd);
             }
             else {

@@ -55,11 +55,13 @@ dkms.conf
 private/*
 tools/*
 .git2/*
-Makefile
+Makefile.w98
 README_old.md
+README_old2.md
 ref.txt
 BuildWin.bat
 Up2Git.bat
+InstallEnvironment.bat
 win98.iso
 
 
