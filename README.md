@@ -11,7 +11,4 @@ But it does require an ISO of Windows 98!
 autorun.exe - 100% decompiled  
 wb16off.exe - 100% disassembled (untested)
 
-### System
-welcome.exe - 2% decompiled (roughly)
-
 

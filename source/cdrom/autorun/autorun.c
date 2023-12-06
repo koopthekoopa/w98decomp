@@ -45,17 +45,17 @@ enum {
 #define PARAMS_ROOT(item)      (((item) >> 3) & RootMax)
 #define DIR_ROOT(item)         (item & RootMax)
 
-#define GetName(x)              x + 1
-#define GetDesc(x)              x + 2
-#define GetExec(x)              x + 3
-#define GetParam(x)             x + 4
-#define GetDir(x)               x + 5
+#define GetName(x)             x + 1
+#define GetDesc(x)             x + 2
+#define GetExec(x)             x + 3
+#define GetParam(x)            x + 4
+#define GetDir(x)              x + 5
 
 typedef struct {
     HWND hWnd;
 
     HDC hDc;
-    HBITMAP hUnkBmp;
+    HBITMAP hBackBmp;
     HBITMAP hBtnNormal;
     HBITMAP hBtnHigh;
 
@@ -226,9 +226,9 @@ void AutoRunClean(AutoRunUserData* data) {
     }
 
     if (data->hDc) {
-        if (data->hUnkBmp) {
-            SelectBitmap(data->hDc, data->hUnkBmp);
-            data->hUnkBmp = NULL;
+        if (data->hBackBmp) {
+            SelectBitmap(data->hDc, data->hBackBmp);
+            data->hBackBmp = NULL;
         }
         DeleteDC(data->hDc);
         data->hDc = NULL;
@@ -269,20 +269,20 @@ BOOL AutoRunBuildPath(char* path, int resource, DWORD root) {
 
     *directory = 0;
     switch (root) {
-    case RootCD: {
-        GetModuleFileName(g_hInst, directory, sizeof(directory));
-        _PathStripToRoot(directory);
-        break;
-    }
+        case RootCD: {
+            GetModuleFileName(g_hInst, directory, sizeof(directory));
+            _PathStripToRoot(directory);
+            break;
+        }
 
-    case RootWin: {
-        GetRealWindowsDirectory(directory, sizeof(directory));
-        break;
-    }
+        case RootWin: {
+            GetRealWindowsDirectory(directory, sizeof(directory));
+            break;
+        }
 
-    case RootSys: {
-        GetSystemDirectory(directory, sizeof(directory));
-    }
+        case RootSys: {
+            GetSystemDirectory(directory, sizeof(directory));
+        }
     }
 
     if (*directory) {
@@ -310,8 +310,8 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
         goto exit;
     }
 
-    data->hUnkBmp = SelectBitmap(data->hDc, (HBITMAP)cs->lpCreateParams);
-    if (!data->hUnkBmp) {
+    data->hBackBmp = SelectBitmap(data->hDc, (HBITMAP)cs->lpCreateParams);
+    if (!data->hBackBmp) {
         goto exit;
     }
 
@@ -717,38 +717,38 @@ void AutoRunHandleKeys(AutoRunUserData* data, TCHAR key) {
     int i;
 
     switch (key) {
-    case VK_TAB: {
-        position = (GetKeyState(VK_SHIFT) < 0) ? -1 : 1;
-        break;
-    }
-    case VK_RETURN: {
-        if (g_activeButton >= 0) {
-            AutoRunClickButton(data, g_activeButton);
+        case VK_TAB: {
+            position = (GetKeyState(VK_SHIFT) < 0) ? -1 : 1;
+            break;
         }
-    }
-    case VK_ESCAPE: {
-        button = -1;
-        break;
-    }
-    case VK_END: {
-        button = 4;
-    }
-    case VK_LEFT:
-    case VK_UP: {
-        position = -1;
-        break;
-    }
-    case VK_HOME: {
-        button = -1;
-    }
-    case VK_RIGHT:
-    case VK_DOWN: {
-        position = 1;
-        break;
-    }
-    default: {
-        return;
-    }
+        case VK_RETURN: {
+            if (g_activeButton >= 0) {
+                AutoRunClickButton(data, g_activeButton);
+            }
+        }
+        case VK_ESCAPE: {
+            button = -1;
+            break;
+        }
+        case VK_END: {
+            button = 4;
+        }
+        case VK_LEFT:
+        case VK_UP: {
+            position = -1;
+            break;
+        }
+        case VK_HOME: {
+            button = -1;
+        }
+        case VK_RIGHT:
+        case VK_DOWN: {
+            position = 1;
+            break;
+        }
+        default: {
+            return;
+        }
     }
 
     if (position != 0) {
@@ -859,97 +859,97 @@ LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     unk = g_hMainWindow;
 
     switch (msg) {
-    case WM_PAINT: {
-        AutoRunPaint(data);
-        break;
-    }
-    case WM_CREATE: {
-        PlaySound(MAKEINTRESOURCE(IDW_STARTUP), g_hInst, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
-        AutoRunInitButtons(data);
-        ShowWindow(hWnd, SW_SHOWNORMAL);
-
-        if (!AutoRunCheckVersion(data)) {
-            return -1;
-        }
-        break;
-    }
-    case WM_DESTROY: {
-        PostQuitMessage(0);
-        break;
-    }
-    case WM_SIZE: {
-        AutoRunResize(data);
-        break;
-    }
-    case WM_ACTIVATE: {
-        g_appDisabled = (LOWORD(wParam) == WA_INACTIVE || HIWORD(wParam));
-        AutoRunDetectButton(data);
-
-        unk = g_hMainWindow;
-        goto defaultRet;
-    }
-    case WM_NCCREATE: {
-        data = (AutoRunUserData*)LocalAlloc(LPTR, sizeof(AutoRunUserData));
-        if (data && !AutoRunInit(hWnd, data, (LPCREATESTRUCT)lParam)) {
-            LocalFree((HANDLE)data);
-            data = NULL;
-        }
-
-        SetWindowLong(hWnd, GWL_USERDATA, (LONG)data);
-
-        unk = hWnd;
-
-        if (!data) {
-            return FALSE;
-        }
-
-        goto defaultRet;
-    }
-    case WM_NCDESTROY: {
-        if (data) {
-            AutoRunClean(data);
-            LocalFree(data);
-        }
-        g_hMainWindow = NULL;
-
-        unk = g_hMainWindow;
-        goto defaultRet;
-    }
-    case WM_ERASEBKGND: {
-        AutoRunErase(data, (HDC)wParam);
-        break;
-    }
-    case WM_KEYDOWN: {
-        AutoRunHandleKeys(data, (TCHAR)wParam);
-        break;
-    }
-    case WM_COMMAND: {
-        if (HIWORD(wParam) == BN_CLICKED) {
-            AutoRunClickButton(data, LOWORD(wParam));
-        }
-        break;
-    }
-    case WM_TIMER: {
-        AutoRunDetectButton(data);
-        break;
-    }
-    case WM_QUERYNEWPALETTE: {
-        AutoRunRealizePalette(hWnd, data, NULL);
-        break;
-    }
-    case WM_PALETTECHANGED: {
-        if (wParam == (WPARAM)hWnd) {
+        case WM_PAINT: {
+            AutoRunPaint(data);
             break;
         }
-    }
-    case WM_APP: {
-        AutoRunButtonOnMouse(data, lParam, wParam);
-        break;
-    }
-    default:
-    defaultRet:
-        g_hMainWindow = unk;
-        return DefWindowProc(hWnd, msg, wParam, lParam);
+        case WM_CREATE: {
+            PlaySound(MAKEINTRESOURCE(IDW_STARTUP), g_hInst, SND_RESOURCE | SND_NODEFAULT | SND_ASYNC);
+            AutoRunInitButtons(data);
+            ShowWindow(hWnd, SW_SHOWNORMAL);
+
+            if (!AutoRunCheckVersion(data)) {
+                return -1;
+            }
+            break;
+        }
+        case WM_DESTROY: {
+            PostQuitMessage(0);
+            break;
+        }
+        case WM_SIZE: {
+            AutoRunResize(data);
+            break;
+        }
+        case WM_ACTIVATE: {
+            g_appDisabled = (LOWORD(wParam) == WA_INACTIVE || HIWORD(wParam));
+            AutoRunDetectButton(data);
+
+            unk = g_hMainWindow;
+            goto defaultRet;
+        }
+        case WM_NCCREATE: {
+            data = (AutoRunUserData*)LocalAlloc(LPTR, sizeof(AutoRunUserData));
+            if (data && !AutoRunInit(hWnd, data, (LPCREATESTRUCT)lParam)) {
+                LocalFree((HANDLE)data);
+                data = NULL;
+            }
+
+            SetWindowLong(hWnd, GWL_USERDATA, (LONG)data);
+
+            unk = hWnd;
+
+            if (!data) {
+                return FALSE;
+            }
+
+            goto defaultRet;
+        }
+        case WM_NCDESTROY: {
+            if (data) {
+                AutoRunClean(data);
+                LocalFree(data);
+            }
+            g_hMainWindow = NULL;
+
+            unk = g_hMainWindow;
+            goto defaultRet;
+        }
+        case WM_ERASEBKGND: {
+            AutoRunErase(data, (HDC)wParam);
+            break;
+        }
+        case WM_KEYDOWN: {
+            AutoRunHandleKeys(data, (TCHAR)wParam);
+            break;
+        }
+        case WM_COMMAND: {
+            if (HIWORD(wParam) == BN_CLICKED) {
+                AutoRunClickButton(data, LOWORD(wParam));
+            }
+            break;
+        }
+        case WM_TIMER: {
+            AutoRunDetectButton(data);
+            break;
+        }
+        case WM_QUERYNEWPALETTE: {
+            AutoRunRealizePalette(hWnd, data, NULL);
+            break;
+        }
+        case WM_PALETTECHANGED: {
+            if (wParam == (WPARAM)hWnd) {
+                break;
+            }
+        }
+        case WM_APP: {
+            AutoRunButtonOnMouse(data, lParam, wParam);
+            break;
+        }
+        default:
+defaultRet:
+            g_hMainWindow = unk;
+            return DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
     return TRUE;

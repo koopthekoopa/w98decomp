@@ -56,10 +56,13 @@ private/*
 tools/*
 .git2/*
 Makefile.w98
+Makefile
+Makefile.mak
 README_old.md
 README_old2.md
 ref.txt
 BuildWin.bat
+RunMake.bat
 Up2Git.bat
 InstallEnvironment.bat
 win98.iso
