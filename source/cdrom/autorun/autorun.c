@@ -1,5 +1,7 @@
 #include "autorun.h"
 
+/// Macros
+
 #define IDB_BACKDROP_16                  200
 
 #define RESBUTTON_INVALID                -1
@@ -31,6 +33,20 @@
 #define BUTTON_3_COLOR                   RGB(132, 214, 82)
 #define BUTTON_4_COLOR                   RGB(0, 156, 255)
 
+#define ROOT(app, parms, dir)            ((app << 6) | (parms << 3) | dir)
+
+#define EXEC_ROOT(item)                  ((item) >> 6)
+#define PARAMS_ROOT(item)                (((item) >> 3) & RootMax)
+#define DIR_ROOT(item)                   (item & RootMax)
+
+#define GetName(x)                       x + 1
+#define GetDesc(x)                       x + 2
+#define GetExec(x)                       x + 3
+#define GetParam(x)                      x + 4
+#define GetDir(x)                        x + 5
+
+/// Enums and structures
+
 enum {
     RootNone = 0, /* app doesnt need relative directory */
     RootCD, /* cd path relative */
@@ -38,18 +54,6 @@ enum {
     RootSys, /* system path relative */
     RootMax = RootSys /* for bitwise ops */
 };
-
-#define ROOT(app, parms, dir)  ((app << 6) | (parms << 3) | dir)
-
-#define EXEC_ROOT(item)        ((item) >> 6)
-#define PARAMS_ROOT(item)      (((item) >> 3) & RootMax)
-#define DIR_ROOT(item)         (item & RootMax)
-
-#define GetName(x)             x + 1
-#define GetDesc(x)             x + 2
-#define GetExec(x)             x + 3
-#define GetParam(x)            x + 4
-#define GetDir(x)              x + 5
 
 typedef struct {
     HWND hWnd;
@@ -77,8 +81,8 @@ typedef struct {
     int x, y;
     RECT btnLoc, textLoc;
 
-    DWORD unk0;
-    DWORD unk1;
+    DWORD unk0; // unused
+    DWORD unk1; // unused
 
     HWND hWnd;
     WNDPROC prevProc;
@@ -86,6 +90,8 @@ typedef struct {
     char text[64];
     char description[256];
 } AutoRunButton;
+
+/// Globals
 
 HCURSOR g_mainCursor = NULL;
 
@@ -126,12 +132,16 @@ HPEN g_buttonPens[] = {
     NULL,
 };
 
+/// Read only data (merged into .text)
+
 static const char c_szAutoRunPrevention[] = "__Win95SetupDiskQuery";
 static const char c_szAutoRunClass[] = "AutoRunMain";
 static const char c_szDefFontName[] = "Arial";
 
 static const int c_wsStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
 static const int c_defFontSize = 19;
+
+/// Functions
 
 // AUTORUN.EXE:0x004010b8
 // should've been in utils.c, microsoft
@@ -192,6 +202,8 @@ void AutoRunInitButtons(AutoRunUserData* data) {
     for (i = 0; i < AUTORUN_MAX_BUTTONS; i++) {
         hWnd = NULL;
 
+        // why does it create buttons when "g_has4BitDisplay" is false???
+        // I'm starting to believe Windows 98's autorun program is rushed.
         if (g_autoRunButtons[i].resource != RESBUTTON_INVALID && !g_has4BitDisplay) {
             hWnd = AutoRunCreateButton(data);
         }
@@ -540,10 +552,9 @@ void AutoRunPaint(AutoRunUserData* data) {
     EndPaint(data->hWnd, &ps);
 }
 
-#define AUTORUN_MOUSE_EVENT 0
-
 // AUTORUN.EXE:0x00401a57
 void AutoRunActivateButton(AutoRunUserData* data, int index) {
+#define AUTORUN_MOUSE_EVENT 0
     AutoRunButton* newBtn;
     AutoRunButton* oldBtn;
 
@@ -586,6 +597,7 @@ void AutoRunActivateButton(AutoRunUserData* data, int index) {
 
         UpdateWindow(data->hWnd);
     }
+#undef AUTORUN_MOUSE_EVENT
 }
 
 // AUTORUN.EXE:0x00401b9d
