@@ -1,6 +1,12 @@
+/// Windows Version Program
+/// NE x86 16 application
+
 #include "resource.h"
 #include <windows.h>
 
+/// Functions
+
+/// WINVER.EXE:0x1000:0x0000
 LRESULT CALLBACK _export APPDLGPROC(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch(msg) {
         case WM_INITDIALOG: {
@@ -16,6 +22,7 @@ LRESULT CALLBACK _export APPDLGPROC(HWND hWnd, UINT msg, WPARAM wParam, LPARAM l
     return FALSE;
 }
 
+/// WINVER.EXE:0x1000:0x0034
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     char wndTitle[128];
     

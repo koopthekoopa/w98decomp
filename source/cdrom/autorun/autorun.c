@@ -1,3 +1,6 @@
+/// Windows Version Program
+/// PE x86 application
+
 #include "autorun.h"
 
 /// Macros
@@ -134,12 +137,12 @@ HPEN g_buttonPens[] = {
 
 /// Read only data (merged into .text)
 
-static const char c_szAutoRunPrevention[] = "__Win95SetupDiskQuery";
-static const char c_szAutoRunClass[] = "AutoRunMain";
-static const char c_szDefFontName[] = "Arial";
+static const char szAutoRunPrevention[] = "__Win95SetupDiskQuery";
+static const char szAutoRunClass[] = "AutoRunMain";
+static const char szDefFontName[] = "Arial";
 
-static const int c_wsStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-static const int c_defFontSize = 19;
+static const int iWsStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+static const int iDefaultFontSize = 19;
 
 /// Functions
 
@@ -357,7 +360,7 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
     {
         HDC hDc = GetDC(NULL);
         LOGFONT logFont = {
-            c_defFontSize,
+            iDefaultFontSize,
             0,
             0,
             0,
@@ -374,7 +377,7 @@ BOOL AutoRunInit(HWND hWnd, AutoRunUserData* data, LPCREATESTRUCT cs) {
         };
 
         if (!LoadString(g_hInst, IDS_DEFAULTFONTNAME, logFont.lfFaceName, sizeof(logFont.lfFaceName))) {
-            lstrcpy(logFont.lfFaceName, c_szDefFontName);
+            lstrcpy(logFont.lfFaceName, szDefFontName);
         }
 
         if (LoadString(g_hInst, IDS_DEFAULTFONTSIZE, weightBuf, sizeof(weightBuf))) {
@@ -981,7 +984,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     g_hInst = hInstance;
 
-    hWnd = FindWindow(c_szAutoRunPrevention, c_szAutoRunPrevention);
+    hWnd = FindWindow(szAutoRunPrevention, szAutoRunPrevention);
     if (hWnd) {
         ret = 0;
         goto exit;
@@ -992,14 +995,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         goto exit;
     }
 
-    hWnd = FindWindow(c_szAutoRunClass, szAppTitle);
+    hWnd = FindWindow(szAutoRunClass, szAppTitle);
     if (hWnd) {
         ret = 0;
         SetForegroundWindow(hWnd);
         goto exit;
     }
 
-    if (!GetClassInfo(g_hInst, c_szAutoRunClass, &wc)) {
+    if (!GetClassInfo(g_hInst, szAutoRunClass, &wc)) {
         wc.style = 0;
         wc.cbWndExtra = 0;
         wc.cbClsExtra = 0;
@@ -1009,7 +1012,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         wc.hIcon = NULL; // in windows 9x the icon would be seen as the windows logo
         wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
         wc.lpszMenuName = NULL;
-        wc.lpszClassName = c_szAutoRunClass;
+        wc.lpszClassName = szAutoRunClass;
 
         if (!RegisterClass(&wc))
             goto exit;
@@ -1045,8 +1048,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     rect.right = rect.left + bBackground.bmWidth;
     rect.bottom = rect.top + bBackground.bmHeight;
 
-    AdjustWindowRect(&rect, c_wsStyle, FALSE);
-    g_hMainWindow = CreateWindow(c_szAutoRunClass, szAppTitle, c_wsStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, g_hInst, hbBackground);
+    AdjustWindowRect(&rect, iWsStyle, FALSE);
+    g_hMainWindow = CreateWindow(szAutoRunClass, szAppTitle, iWsStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, g_hInst, hbBackground);
 
     if (g_hMainWindow) {
         while (GetMessage(&msg, NULL, 0, 0)) {
@@ -1091,7 +1094,7 @@ int _stdcall WinEntry() {
         pszCmdLine++;
     }
 
-    start.dwFlags = STARTF_USESHOWWINDOW;
+    start.dwFlags = 0;
     GetStartupInfoA(&start);
 
     ret = WinMain(GetModuleHandle(NULL), NULL, pszCmdLine, (start.dwFlags & STARTF_USESHOWWINDOW) ? start.wShowWindow : SW_SHOWDEFAULT);
