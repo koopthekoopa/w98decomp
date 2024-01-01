@@ -1079,20 +1079,17 @@ int _stdcall WinEntry() {
     LPSTR pszCmdLine = GetCommandLine();
 
     if (*pszCmdLine == '\"') {
-        while (*++pszCmdLine && (*pszCmdLine != '\"')) {}
-
-        if (*pszCmdLine != '\"') {
+        while (*++pszCmdLine && *pszCmdLine != '\"') {}
+        
+        if (*pszCmdLine == '\"') {
             pszCmdLine++;
         }
     }
     else {
-        while (*pszCmdLine > ' ') {
-            pszCmdLine++;
-        }
+        while (*pszCmdLine++ > ' ') {}
     }
-    while (*pszCmdLine && (*pszCmdLine <= ' ')) {
-        pszCmdLine++;
-    }
+
+    while (*pszCmdLine && *pszCmdLine++ <= ' ') {}
 
     start.dwFlags = 0;
     GetStartupInfo(&start);
