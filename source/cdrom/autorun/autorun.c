@@ -1095,7 +1095,7 @@ int _stdcall WinEntry() {
     }
 
     start.dwFlags = 0;
-    GetStartupInfoA(&start);
+    GetStartupInfo(&start);
 
     ret = WinMain(GetModuleHandle(NULL), NULL, pszCmdLine, (start.dwFlags & STARTF_USESHOWWINDOW) ? start.wShowWindow : SW_SHOWDEFAULT);
     ExitProcess(ret);

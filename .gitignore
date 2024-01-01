@@ -58,8 +58,7 @@ tools/*
 Makefile.w98
 Makefile
 Makefile.mak
-README_old.md
-README_old2.md
+READMEbuild.md
 ref.txt
 BuildWin.bat
 RunMake.bat
