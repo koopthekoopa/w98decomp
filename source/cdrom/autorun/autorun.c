@@ -1,4 +1,4 @@
-/// Windows Version Program
+/// Windows Auto Run Program
 /// PE x86 application
 
 #include "autorun.h"
@@ -96,22 +96,23 @@ typedef struct {
 
 /// Globals
 
-HCURSOR g_mainCursor = NULL;
+HCURSOR g_mainCursor = NULL;    // AUTORUN.EXE:0x00403000
 
-HINSTANCE g_hInst = NULL;
+HINSTANCE g_hInst = NULL;       // AUTORUN.EXE:0x00403004
 
-BOOL g_has4BitDisplay = FALSE;
-BOOL g_hasPalette = FALSE;
-BOOL g_mouseAvailable = FALSE;
-BOOL g_enableSetup = FALSE;
-BOOL g_appDisabled = TRUE;
+BOOL g_has4BitDisplay = FALSE;  // AUTORUN.EXE:0x00403008
+BOOL g_hasPalette = FALSE;      // AUTORUN.EXE:0x0040300c
+BOOL g_mouseAvailable = FALSE;  // AUTORUN.EXE:0x00403010
+BOOL g_enableSetup = FALSE;     // AUTORUN.EXE:0x00403014
+BOOL g_appDisabled = TRUE       // AUTORUN.EXE:0x00403018
 
-HHOOK g_hMouseHook = NULL;
+HHOOK g_hMouseHook = NULL;      // AUTORUN.EXE:0x0040301c
 
-HWND g_hMainWindow = NULL;
+HWND g_hMainWindow = NULL;      // AUTORUN.EXE:0x00403020
 
-int g_activeButton = -2;
+int g_activeButton = -2;        // AUTORUN.EXE:0x00403024
 
+// AUTORUN.EXE:0x00403028
 AutoRunButton g_autoRunButtons[] = {
     { RESBUTTON_INTERACTIVE_CD,    ROOT(RootCD, RootNone, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, 0, 0, NULL, NULL}, // interactive cd sampler
     { RESBUTTON_COOL_VIDEOS,       ROOT(RootNone, RootCD, RootCD),        0, 0, 0, 0, BUTTON_WIDTH, BUTTON_HEIGHT, 0, 0, 0, 0, 0, 0, NULL, NULL}, // cool video clips
@@ -121,6 +122,7 @@ AutoRunButton g_autoRunButtons[] = {
 
 #define AUTORUN_MAX_BUTTONS ARRAY_SIZE(g_autoRunButtons)
 
+// AUTORUN.EXE:0x00403628
 COLORREF g_buttonColors[] = {
     BUTTON_1_COLOR,
     BUTTON_2_COLOR,
@@ -128,6 +130,7 @@ COLORREF g_buttonColors[] = {
     BUTTON_4_COLOR,
 };
 
+// AUTORUN.EXE:0x00403638
 HPEN g_buttonPens[] = {
     NULL,
     NULL,
@@ -868,10 +871,10 @@ LRESULT CALLBACK AutoRunMouseHook(int code, WPARAM wParam, LPARAM lParam) {
 // AUTORUN.EXE:0x004021c3
 LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     AutoRunUserData* data;
-    HWND unk;
+    HWND hCurrentWnd;
 
     data = (AutoRunUserData*)GetWindowLong(hWnd, GWL_USERDATA);
-    unk = g_hMainWindow;
+    hCurrentWnd = g_hMainWindow;
 
     switch (msg) {
         case WM_PAINT: {
@@ -900,7 +903,7 @@ LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             g_appDisabled = (LOWORD(wParam) == WA_INACTIVE || HIWORD(wParam));
             AutoRunDetectButton(data);
 
-            unk = g_hMainWindow;
+            hCurrentWnd = g_hMainWindow;
             goto defaultRet;
         }
         case WM_NCCREATE: {
@@ -912,7 +915,7 @@ LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
             SetWindowLong(hWnd, GWL_USERDATA, (LONG)data);
 
-            unk = hWnd;
+            hCurrentWnd = hWnd;
 
             if (!data) {
                 return FALSE;
@@ -927,7 +930,7 @@ LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
             g_hMainWindow = NULL;
 
-            unk = g_hMainWindow;
+            hCurrentWnd = g_hMainWindow;
             goto defaultRet;
         }
         case WM_ERASEBKGND: {
@@ -963,7 +966,7 @@ LRESULT CALLBACK AutoRunWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         default:
 defaultRet:
-            g_hMainWindow = unk;
+            g_hMainWindow = hCurrentWnd;
             return DefWindowProc(hWnd, msg, wParam, lParam);
     }
 
