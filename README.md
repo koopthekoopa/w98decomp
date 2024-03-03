@@ -6,14 +6,13 @@ Windows 98 Second Edition is also going to be decompiled.
 ## There is currently no way to build the decompilation yet as this project just started...
 But it does require an ISO of Windows 98!
 
-## Progress
+## Fully decompiled apps (so far)
 ### CD-ROM
-autorun.exe - 100% decompiled  
-wb16off.exe - 100% disassembled (untested)  
+autorun.exe  
+wb16off.exe (untested)  
 
-### System
-winver.exe - 100% decompiled  
-pbrush.exe - 100% decompiled  
-write.exe - 100% decompiled  
+### System 
+pbrush.exe  
+write.exe  
 
 

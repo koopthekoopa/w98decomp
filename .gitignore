@@ -55,6 +55,7 @@ dkms.conf
 private/*
 tools/*
 .git2/*
+.vscode/* 
 Makefile.w98
 Makefile
 Makefile.mak
